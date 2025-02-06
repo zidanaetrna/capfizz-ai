@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e
 
-# Warna untuk output
+# Warna terminal
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[0;33m'
@@ -11,10 +11,7 @@ NC='\033[0m'
 # Tampilkan Logo
 curl -s https://raw.githubusercontent.com/zidanaetrna/unichain/refs/heads/main/button_logo_script.sh | bash
 
-echo -e "${CYAN}Starting Docker and Capfizz AI Web Generator...${NC}"
-sleep 2
-
-# Fungsi log untuk output berwarna
+# Fungsi logging
 log() {
     local level=$1
     local message=$2
@@ -28,48 +25,76 @@ log() {
     echo -e "-----------------------------------------------------\n"
 }
 
-# Update sistem dan install dependensi
-log "INFO" "Memperbarui daftar paket dan menginstal paket dasar..."
-sudo apt update && sudo apt upgrade -y
-log "SUCCESS" "Sistem diperbarui."
-
-# Install Docker jika belum ada
+# Periksa dan instal Docker jika belum ada
+log "INFO" "Memeriksa dan menginstal Docker jika belum ada..."
 if ! command -v docker &> /dev/null; then
-    log "INFO" "Docker tidak ditemukan, menginstal Docker..."
-    sudo apt install -y docker.io
+    log "INFO" "Docker tidak ditemukan, menginstal..."
+    apt update && apt install -y docker.io
+    systemctl start docker
+    systemctl enable docker
     log "SUCCESS" "Docker berhasil diinstal."
+else
+    log "SUCCESS" "Docker sudah terinstal."
 fi
 
-# Download Capfizz AI
-log "INFO" "Mengunduh Capfizz AI dari repository..."
-mkdir -p $HOME/capfizz && cd $HOME/capfizz
-git clone https://github.com/zidanaetrna/capfizz-ai.git .
-log "SUCCESS" "Capfizz AI berhasil diunduh."
+# Buat direktori untuk project
+log "INFO" "Mempersiapkan direktori Capfizz AI..."
+mkdir -p $HOME/capfizz-ai && cd $HOME/capfizz-ai
 
-# Build dan Run Docker Container untuk Capfizz AI
-log "INFO" "Membangun dan menjalankan container Capfizz AI..."
-docker build -t capfizz/ai:latest .
+# Buat Dockerfile
+log "INFO" "Membuat Dockerfile untuk Capfizz AI..."
+cat <<EOF > Dockerfile
+# Gunakan image Nginx sebagai base
+FROM nginx:latest
+
+# Buat direktori untuk halaman web
+RUN mkdir -p /usr/share/nginx/html
+
+# Tambahkan halaman web redirect ke Capfizz AI
+RUN echo '<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Capfizz AI Registration</title>
+    <script>
+        window.location.href = "https://mainnet.capfizz.com/register?ref=GFMNDF";
+    </script>
+</head>
+<body>
+    <h1>Redirecting to Capfizz AI Registration...</h1>
+</body>
+</html>' > /usr/share/nginx/html/index.html
+
+# Expose port 20320
+EXPOSE 20320
+
+# Jalankan Nginx
+CMD ["nginx", "-g", "daemon off;"]
+EOF
+
+log "SUCCESS" "Dockerfile berhasil dibuat."
+
+# Bangun container Docker
+log "INFO" "Membangun container Docker untuk Capfizz AI..."
+docker build -t capfizz-ai .
+
+# Jalankan container
+log "INFO" "Menjalankan container Capfizz AI pada port 20320..."
 docker run -d \
    --restart unless-stopped \
    --name capfizz-ai \
-   --network host \
-   -v "$HOME/appdata/capfizz:/config" \
-   -e USER_ID="$(id -u)" \
-   -e GROUP_ID="$(id -g)" \
-   -e WEB_LISTENING_PORT="20320" \
-   capfizz/ai:latest
-log "SUCCESS" "Capfizz AI berjalan di port 20320."
+   -p 20320:80 \
+   capfizz-ai
 
-# Konfigurasi Firewall
-log "INFO" "Mengonfigurasi firewall untuk Capfizz AI..."
-sudo ufw allow 20320/tcp
-log "SUCCESS" "Firewall dikonfigurasi."
+log "SUCCESS" "Capfizz AI telah berjalan di port 20320."
 
-# Dapatkan IP VPS
+# Konfigurasi firewall
+log "INFO" "Mengizinkan port 20320 di firewall..."
+ufw allow 20320/tcp
+log "SUCCESS" "Firewall dikonfigurasi untuk port 20320."
+
+# Tampilkan URL akses
 IP_ADDRESS=$(hostname -I | awk '{print $1}')
-REGISTER_URL="https://mainnet.capfizz.com/register?ref=GFMNDF&server=$IP_ADDRESS"
-
-# Menampilkan informasi akhir
-log "SUCCESS" "Setup selesai! Akses website di:"
-echo -e "${GREEN}http://$IP_ADDRESS:20320/${NC}"
-echo -e "${YELLOW}Daftar dengan referal: $REGISTER_URL${NC}"
+URL="http://$IP_ADDRESS:20320/"
+log "SUCCESS" "Setup selesai! Buka browser dan akses: $URL"
