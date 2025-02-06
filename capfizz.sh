@@ -25,10 +25,6 @@ log() {
     echo -e "-----------------------------------------------------\n"
 }
 
-# Prompt untuk instalasi ekstensi
-log "INFO" "Install ekstensi Capfizz Sentry Node dari Chrome Web Store:"
-log "INFO" "https://chromewebstore.google.com/detail/capfizz-sentry-node/agollninopbkafedoijcnbdopajjjmfa"
-
 # Memeriksa dan menginstal Docker jika belum ada
 log "INFO" "Memeriksa dan menginstal Docker jika belum ada..."
 if ! command -v docker &> /dev/null; then
@@ -49,15 +45,15 @@ log "SUCCESS" "Dockerfile berhasil diunduh."
 
 # Bangun container Docker
 log "INFO" "Membangun container Docker untuk Capfizz AI..."
-docker build -t capfizz-ai .
+docker build -t capfizz-chromium .
 
 # Jalankan container
 log "INFO" "Menjalankan container Capfizz AI pada port 20320..."
 docker run -d \
    --restart unless-stopped \
-   --name capfizz-ai \
-   -p 20320:80 \
-   capfizz-ai
+   --name capfizz-chromium \
+   -p 20320:9222 \
+   capfizz-chromium
 
 log "SUCCESS" "Capfizz AI telah berjalan di port 20320."
 
