@@ -17,7 +17,7 @@ log() {
     case $level in
         "INFO") echo -e "${CYAN}[INFO] ${timestamp} - ${message}${NC}" ;;
         "SUCCESS") echo -e "${GREEN}[SUCCESS] ${timestamp} - ${message}${NC}" ;;
-        "ERROR") echo -e "${RED}[ERROR] ${timestamp} - ${message${NC}" ;;
+        "ERROR") echo -e "${RED}[ERROR] ${timestamp} - ${message}${NC}" ;;
     esac
     echo -e "-----------------------------------------------------\n"
 }
