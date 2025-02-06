@@ -1,47 +1,21 @@
-# Use a base image with the required dependencies for running Chromium
-FROM ubuntu:20.04
+# Use the official Chromium Docker image
+FROM zenika/alpine-chrome:latest
 
-# Install dependencies
-RUN apt-get update && apt-get install -y \
-    wget \
-    curl \
-    gnupg2 \
-    ca-certificates \
-    fonts-liberation \
-    libappindicator3-1 \
-    libasound2 \
-    libatk-bridge2.0-0 \
-    libatk1.0-0 \
-    libcups2 \
-    libdbus-1-3 \
-    libgdk-pixbuf2.0-0 \
-    libnspr4 \
-    libnss3 \
-    libx11-xcb1 \
-    libxcomposite1 \
-    libxdamage1 \
-    libxrandr2 \
-    xdg-utils \
-    chromium-browser \
-    && apt-get clean
-
-# Set up working directory
+# Set the working directory for your app
 WORKDIR /app
 
-# Install Capfizz Extension
+# Install dependencies for Capfizz extension
+RUN apk update && apk add --no-cache \
+    unzip \
+    chromium
+
+# Install Capfizz Extension (assuming you have a zip of the extension)
 RUN mkdir -p /app/extensions && \
     curl -L -o /app/extensions/capfizz.zip https://github.com/0xmoei/capfizz-extension/archive/refs/heads/main.zip && \
-    apt-get install -y unzip && \
     unzip /app/extensions/capfizz.zip -d /app/extensions/
 
-# Expose the required port for access
+# Expose port for debugging and access
 EXPOSE 9222
 
-# Run Chromium with Capfizz extension in headless mode
-CMD chromium-browser \
-    --headless \
-    --disable-gpu \
-    --remote-debugging-port=9222 \
-    --no-sandbox \
-    --load-extension=/app/extensions/capfizz-extension-main \
-    http://localhost
+# Command to run Chromium in headless mode with the Capfizz extension
+CMD ["chromium-browser", "--headless", "--no-sandbox", "--remote-debugging-port=9222", "--load-extension=/app/extensions/capfizz-extension-main", "http://localhost"]
