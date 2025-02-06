@@ -52,4 +52,4 @@ log "SUCCESS" "Firewall dikonfigurasi untuk port 20320."
 # Tampilkan URL akses
 IP_ADDRESS=$(hostname -I | awk '{print $1}')
 URL="http://$IP_ADDRESS:20320/"
-log "SUCCESS" "Setup selesai! Buka browser dan akses: $URL"
+log "SUCCESS" "Setup selesai! Buka browser dan akses: \"$URL\""
