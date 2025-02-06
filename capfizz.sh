@@ -43,17 +43,23 @@ curl -o Dockerfile https://raw.githubusercontent.com/zidanaetrna/capfizz-ai/capf
 
 log "SUCCESS" "Dockerfile berhasil diunduh."
 
+# Unduh package.json dari GitHub
+log "INFO" "Mengunduh package.json dari GitHub..."
+curl -o package.json https://raw.githubusercontent.com/zidanaetrna/capfizz-ai/capfizz-ai/package.json
+
+log "SUCCESS" "package.json berhasil diunduh."
+
 # Bangun container Docker
 log "INFO" "Membangun container Docker untuk Capfizz AI..."
-docker build -t capfizz-chromium .
+docker build -t capfizz-ai .
 
 # Jalankan container
 log "INFO" "Menjalankan container Capfizz AI pada port 20320..."
 docker run -d \
    --restart unless-stopped \
-   --name capfizz-chromium \
-   -p 20320:9222 \
-   capfizz-chromium
+   --name capfizz-ai \
+   -p 20320:80 \
+   capfizz-ai
 
 log "SUCCESS" "Capfizz AI telah berjalan di port 20320."
 
@@ -62,4 +68,3 @@ IP_ADDRESS=$(hostname -I | awk '{print $1}')
 URL="http://$IP_ADDRESS:20320/"
 log "SUCCESS" "Setup selesai! Buka browser dan akses: $URL"
 
-log "INFO" "Pastikan ekstensi Capfizz Sentry Node terhubung dengan account di https://mainnet.capfizz.com"

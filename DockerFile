@@ -1,29 +1,35 @@
-# Use a base image with Chromium pre-installed
-FROM zenika/alpine-chrome:latest
+# Use an official Node.js image as the base image
+FROM node:16-slim
 
-# Set display to dummy to avoid the need for an actual display server
-ENV DISPLAY=:99
-
-# Install necessary dependencies
-RUN apk update && apk add --no-cache \
-    curl \
-    bash \
-    xvfb-run \
-    ttf-freefont \
-    libx11 \
-    libxcomposite \
-    libxrandr \
-    libxi \
-    libxtst \
-    libxdamage \
-    libgdk-pixbuf \
-    && rm -rf /var/cache/apk/*
-
-# Set the working directory
+# Set the working directory inside the container
 WORKDIR /app
 
-# Expose port for web server (replace with correct port if needed)
+# Copy package.json to the container
+COPY package.json /app/package.json
+
+# Install the dependencies specified in package.json
+RUN npm install
+
+# Install Chromium
+RUN apt-get update && apt-get install -y wget \
+    && wget https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb \
+    && dpkg -i google-chrome-stable_current_amd64.deb \
+    && apt-get install -f -y
+
+# Install other required tools (e.g., for running the app)
+RUN apt-get install -y \
+    fonts-liberation \
+    libappindicator3-1 \
+    libasound2 \
+    libnss3 \
+    libxss1 \
+    xdg-utils
+
+# Expose port 20320 for the application
 EXPOSE 20320
 
-# Command to run Chromium browser in headless mode
-CMD ["xvfb-run", "--server-args='-screen 0 1280x1024x24'", "/usr/bin/chromium-browser", "--no-sandbox", "--headless", "--remote-debugging-port=9222"]
+# Copy your server.js or application entry point (make sure to have server.js or app.js in your project)
+COPY server.js /app/server.js
+
+# Start the application
+CMD ["node", "server.js"]
