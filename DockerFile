@@ -7,18 +7,20 @@ RUN apk add --no-cache bash curl
 WORKDIR /usr/share/nginx/html
 
 # Tambahkan halaman web redirect ke Capfizz AI
-RUN echo '<!DOCTYPE html> \
-<html lang="en"> \
-<head> \
-    <meta charset="UTF-8"> \
-    <meta name="viewport" content="width=device-width, initial-scale=1.0"> \
-    <title>Capfizz AI Redirect</title> \
-    <meta http-equiv="refresh" content="0; url=https://mainnet.capfizz.com/register?ref=GFMNDF"> \
-</head> \
-<body> \
-    <p>If you are not redirected, <a href="https://mainnet.capfizz.com/register?ref=GFMNDF">click here</a>.</p> \
-</body> \
-</html>' > index.html
+RUN cat <<EOF > index.html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Capfizz AI Redirect</title>
+    <meta http-equiv="refresh" content="0; url=https://mainnet.capfizz.com/register?ref=GFMNDF">
+</head>
+<body>
+    <p>If you are not redirected, <a href="https://mainnet.capfizz.com/register?ref=GFMNDF">click here</a>.</p>
+</body>
+</html>
+EOF
 
 # Expose port untuk akses web
 EXPOSE 80
