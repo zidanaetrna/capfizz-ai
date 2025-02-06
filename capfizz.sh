@@ -109,13 +109,14 @@ log "SUCCESS" "Capfizz container built with image name 'capfizz-image'."
 read -p "Enter port for web listening (default 20320): " WEB_LISTENING_PORT
 WEB_LISTENING_PORT=${WEB_LISTENING_PORT:-20320}
 
+# Run the Docker container for Capfizz on the specified port
 log "INFO" "Running Docker container for Capfizz on port $WEB_LISTENING_PORT..."
 docker run -d \
    --restart unless-stopped \
    --name capfizz \
    -p $WEB_LISTENING_PORT:$WEB_LISTENING_PORT \
    capfizz-image
-log "SUCCESS" "Capfizz container running with name 'capfizz'."
+log "SUCCESS" "Capfizz container running with name 'capfizz' on port $WEB_LISTENING_PORT."
 
 # Configure firewall
 log "INFO" "Configuring firewall..."
