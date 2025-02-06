@@ -3,7 +3,7 @@ FROM ubuntu:20.04
 # Set the user to root (default user is root in Docker containers)
 USER root
 
-# Install required packages
+# Install required packages using apt-get (Ubuntu package manager)
 RUN apt-get update && apt-get install -y \
     wget \
     curl \
@@ -14,19 +14,24 @@ RUN apt-get update && apt-get install -y \
     libasound2 \
     libatk-bridge2.0-0 \
     libatk1.0-0 \
-    chromium \
+    chromium-browser \
     unzip \
-    tzdata && \
+    tzdata \
+    libx11-xcb1 \
+    libgdk-pixbuf2.0-0 \
+    libnss3 \
+    libxss1 \
+    libgconf-2-4 && \
     apt-get clean
 
 # Set the working directory to /app
 WORKDIR /app
 
 # Add other necessary files like your app or configuration files
-# COPY . .
+# COPY . .  # Uncomment this line if you have any additional files to copy
 
 # Expose the port for the web application
 EXPOSE 20320
 
-# Start the application (you can adjust this depending on what you're running)
-CMD ["chromium", "--no-sandbox", "--headless", "http://localhost:20320"]
+# Start the application (Chromium in headless mode)
+CMD ["chromium-browser", "--no-sandbox", "--headless", "http://localhost:20320"]
