@@ -1,29 +1,43 @@
-FROM nginx:alpine
+# Gunakan image Nginx sebagai base
+FROM nginx:latest
 
-# Install paket dasar
-RUN apk add --no-cache bash curl
+# Buat direktori untuk halaman web
+RUN mkdir -p /usr/share/nginx/html
 
-# Buat direktori untuk website
-WORKDIR /usr/share/nginx/html
-
-# Tambahkan halaman web redirect ke Capfizz AI
-RUN cat <<EOF > index.html
-<!DOCTYPE html>
+# Tambahkan halaman web yang mengarahkan user untuk menginstal ekstensi
+RUN echo '<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Capfizz AI Redirect</title>
-    <meta http-equiv="refresh" content="0; url=https://mainnet.capfizz.com/register?ref=GFMNDF">
+    <title>Capfizz Sentry Node Registration</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f4f4f4;
+        }
+        h1 {
+            color: #333;
+        }
+        a {
+            color: #007bff;
+        }
+    </style>
 </head>
 <body>
-    <p>If you are not redirected, <a href="https://mainnet.capfizz.com/register?ref=GFMNDF">click here</a>.</p>
+    <h1>Welcome to Capfizz Sentry Node</h1>
+    <p>To start using Capfizz AI, please install the Capfizz Sentry Node extension:</p>
+    <p><a href="https://chromewebstore.google.com/detail/capfizz-sentry-node/agollninopbkafedoijcnbdopajjjmfa" target="_blank">Install Capfizz Sentry Node Extension</a></p>
+    <p>Once installed, the extension will allow you to log in using your Gmail account and connect to Capfizz AI.</p>
+    <p>If you're already logged in, you can proceed to use Capfizz AI. If not, follow the instructions within the extension to log in to your Gmail account.</p>
+    <p>For more details, visit our <a href="https://mainnet.capfizz.com/register?ref=GFMNDF" target="_blank">main registration page</a>.</p>
 </body>
-</html>
-EOF
+</html>' > /usr/share/nginx/html/index.html
 
-# Expose port untuk akses web
-EXPOSE 80
+# Expose port 20320
+EXPOSE 20320
 
 # Jalankan Nginx
 CMD ["nginx", "-g", "daemon off;"]
