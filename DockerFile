@@ -15,7 +15,7 @@ RUN apt-get update && apt-get install -y \
     libxss1 \
     libatk-bridge2.0-0 \
     libasound2 \
-    chromium && \
+    chromium-browser && \
     apt-get clean && rm -rf /var/lib/apt/lists/*
 
 # Download and install the Chrome extension (.crx file)
