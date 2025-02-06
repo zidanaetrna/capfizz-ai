@@ -114,7 +114,7 @@ log "INFO" "Running Docker container for Capfizz on port $WEB_LISTENING_PORT..."
 docker run -d \
    --restart unless-stopped \
    --name capfizz \
-   -p $WEB_LISTENING_PORT:$WEB_LISTENING_PORT \
+   -p "$WEB_LISTENING_PORT:$WEB_LISTENING_PORT" \
    capfizz-image
 log "SUCCESS" "Capfizz container running with name 'capfizz' on port $WEB_LISTENING_PORT."
 
