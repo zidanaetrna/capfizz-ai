@@ -1,35 +1,47 @@
-# Use an official Node.js image as the base image
-FROM node:16-slim
+# Use a base image with the required dependencies for running Chromium
+FROM ubuntu:20.04
 
-# Set the working directory inside the container
-WORKDIR /app
-
-# Copy package.json to the container
-COPY package.json /app/package.json
-
-# Install the dependencies specified in package.json
-RUN npm install
-
-# Install Chromium
-RUN apt-get update && apt-get install -y wget \
-    && wget https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb \
-    && dpkg -i google-chrome-stable_current_amd64.deb \
-    && apt-get install -f -y
-
-# Install other required tools (e.g., for running the app)
-RUN apt-get install -y \
+# Install dependencies
+RUN apt-get update && apt-get install -y \
+    wget \
+    curl \
+    gnupg2 \
+    ca-certificates \
     fonts-liberation \
     libappindicator3-1 \
     libasound2 \
+    libatk-bridge2.0-0 \
+    libatk1.0-0 \
+    libcups2 \
+    libdbus-1-3 \
+    libgdk-pixbuf2.0-0 \
+    libnspr4 \
     libnss3 \
-    libxss1 \
-    xdg-utils
+    libx11-xcb1 \
+    libxcomposite1 \
+    libxdamage1 \
+    libxrandr2 \
+    xdg-utils \
+    chromium-browser \
+    && apt-get clean
 
-# Expose port 20320 for the application
-EXPOSE 20320
+# Set up working directory
+WORKDIR /app
 
-# Copy your server.js or application entry point (make sure to have server.js or app.js in your project)
-COPY server.js /app/server.js
+# Install Capfizz Extension
+RUN mkdir -p /app/extensions && \
+    curl -L -o /app/extensions/capfizz.zip https://github.com/0xmoei/capfizz-extension/archive/refs/heads/main.zip && \
+    apt-get install -y unzip && \
+    unzip /app/extensions/capfizz.zip -d /app/extensions/
 
-# Start the application
-CMD ["node", "server.js"]
+# Expose the required port for access
+EXPOSE 9222
+
+# Run Chromium with Capfizz extension in headless mode
+CMD chromium-browser \
+    --headless \
+    --disable-gpu \
+    --remote-debugging-port=9222 \
+    --no-sandbox \
+    --load-extension=/app/extensions/capfizz-extension-main \
+    http://localhost
