@@ -8,6 +8,9 @@ YELLOW='\033[0;33m'
 CYAN='\033[0;36m'
 NC='\033[0m'
 
+# Tampilkan Logo
+curl -s https://raw.githubusercontent.com/zidanaetrna/unichain/refs/heads/main/button_logo_script.sh | bash
+
 # Fungsi logging
 log() {
     local level=$1
@@ -22,19 +25,33 @@ log() {
     echo -e "-----------------------------------------------------\n"
 }
 
-# Menyiapkan direktori untuk project
-log "INFO" "Menyiapkan direktori Capfizz AI..."
-mkdir -p $HOME/capfizz-ai && cd $HOME/capfizz-ai
+# Prompt untuk instalasi ekstensi
+log "INFO" "Install ekstensi Capfizz Sentry Node dari Chrome Web Store:"
+log "INFO" "https://chromewebstore.google.com/detail/capfizz-sentry-node/agollninopbkafedoijcnbdopajjjmfa"
 
-# Mengunduh Dockerfile dari GitHub
-log "INFO" "Mengunduh Dockerfile dari repository..."
+# Memeriksa dan menginstal Docker jika belum ada
+log "INFO" "Memeriksa dan menginstal Docker jika belum ada..."
+if ! command -v docker &> /dev/null; then
+    log "INFO" "Docker tidak ditemukan, menginstal..."
+    apt update && apt install -y docker.io
+    systemctl start docker
+    systemctl enable docker
+    log "SUCCESS" "Docker berhasil diinstal."
+else
+    log "SUCCESS" "Docker sudah terinstal."
+fi
+
+# Unduh Dockerfile dari GitHub
+log "INFO" "Mengunduh Dockerfile dari GitHub..."
 curl -o Dockerfile https://raw.githubusercontent.com/zidanaetrna/capfizz-ai/capfizz-ai/DockerFile
 
-# Bangun Docker image dari Dockerfile
-log "INFO" "Membangun Docker image..."
+log "SUCCESS" "Dockerfile berhasil diunduh."
+
+# Bangun container Docker
+log "INFO" "Membangun container Docker untuk Capfizz AI..."
 docker build -t capfizz-ai .
 
-# Jalankan container Docker
+# Jalankan container
 log "INFO" "Menjalankan container Capfizz AI pada port 20320..."
 docker run -d \
    --restart unless-stopped \
@@ -44,12 +61,9 @@ docker run -d \
 
 log "SUCCESS" "Capfizz AI telah berjalan di port 20320."
 
-# Konfigurasi firewall untuk izinkan port 20320
-log "INFO" "Mengizinkan port 20320 di firewall..."
-ufw allow 20320/tcp
-log "SUCCESS" "Firewall dikonfigurasi untuk port 20320."
-
 # Tampilkan URL akses
 IP_ADDRESS=$(hostname -I | awk '{print $1}')
 URL="http://$IP_ADDRESS:20320/"
-log "SUCCESS" "Setup selesai! Buka browser dan akses: \"$URL\""
+log "SUCCESS" "Setup selesai! Buka browser dan akses: $URL"
+
+log "INFO" "Pastikan ekstensi Capfizz Sentry Node terhubung dengan account di https://mainnet.capfizz.com"
