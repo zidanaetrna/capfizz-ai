@@ -35,44 +35,86 @@ log "SUCCESS" "Package list updated."
 apt upgrade -y
 log "SUCCESS" "Basic packages installed."
 
-# Download the Capfizz extension zip file
+# Install dependencies for Dockerfile build
+log "INFO" "Installing dependencies for Dockerfile build..."
+apt install -y \
+    curl \
+    unzip \
+    wget \
+    ca-certificates \
+    libnss3 \
+    libxss1 \
+    libatk-bridge2.0-0 \
+    libasound2 \
+    && apt clean
+log "SUCCESS" "Dependencies installed."
+
+# Create directory for Docker build context
+log "INFO" "Creating directory for Docker build context..."
+mkdir -p ~/capfizz-docker
+cd ~/capfizz-docker
+
+# Download Capfizz extension zip file
 log "INFO" "Downloading Capfizz extension zip file..."
 curl -L -o "$HOME/Capfizz-sentry-node-Chrome-Web-Store.zip" "https://github.com/zidanaetrna/capfizz-ai/raw/refs/heads/capfizz-ai/Capfizz-sentry-node-Chrome-Web-Store.zip"
 log "SUCCESS" "Capfizz extension zip file downloaded."
 
-# Create directory for Capfizz and extract the zip file
-log "INFO" "Creating directory for Capfizz and extracting zip file..."
-mkdir -p $HOME/Capfizz && cd $HOME/Capfizz
+# Create Dockerfile in the directory
+log "INFO" "Creating Dockerfile..."
+cat <<EOF > Dockerfile
+# Use the official Ubuntu base image
+FROM ubuntu:20.04
 
-if ! command -v unzip &> /dev/null; then
-    log "INFO" "Unzip not installed. Installing unzip..."
-    apt install unzip -y
-    log "SUCCESS" "Unzip installed."
-fi
+# Set the user to root
+USER root
 
-unzip "$HOME/Capfizz-sentry-node-Chrome-Web-Store.zip"
-log "SUCCESS" "Capfizz extension extracted."
+# Prevent interactive prompts
+ENV DEBIAN_FRONTEND=noninteractive
 
-# Remove the zip file after extraction
-rm "$HOME/Capfizz-sentry-node-Chrome-Web-Store.zip"
-log "INFO" "Removed Capfizz extension zip file after extraction."
+# Install required packages and utilities
+RUN apt-get update && apt-get install -y \
+    curl \
+    wget \
+    ca-certificates \
+    unzip \
+    libnss3 \
+    libxss1 \
+    libatk-bridge2.0-0 \
+    libasound2 \
+    && apt-get clean && rm -rf /var/lib/apt/lists/*
 
-# Prompt for web listening port
-read -p "Enter port for web listening (default 7700): " WEB_LISTENING_PORT
-WEB_LISTENING_PORT=${WEB_LISTENING_PORT:-7700}
+# Download and install Capfizz Chrome Web Store extension
+RUN mkdir -p /app/extensions && \
+    curl -L -o /app/extensions/capfizz.zip "https://github.com/zidanaetrna/capfizz-ai/raw/refs/heads/capfizz-ai/Capfizz-sentry-node-Chrome-Web-Store.zip" && \
+    unzip /app/extensions/capfizz.zip -d /app/extensions && \
+    rm /app/extensions/capfizz.zip
+
+# Set the working directory
+WORKDIR /app
+
+# Expose the desired port (20320)
+EXPOSE 20320
+
+# Run the necessary command to start the service
+CMD ["chromium", "--no-sandbox", "--headless", "--remote-debugging-port=9222", "--disable-software-rasterizer", "--disable-gpu", "--headless", "--remote-debugging-port=9222"]
+EOF
+log "SUCCESS" "Dockerfile created."
 
 # Build and run Docker container for Capfizz
 log "INFO" "Building Docker container for Capfizz..."
-docker build -t winsnip/capfizz:latest . && \
+docker build -t capfizz-image ~/capfizz-docker
+log "SUCCESS" "Capfizz container built with image name 'capfizz-image'."
+
+# Prompt for web listening port
+read -p "Enter port for web listening (default 20320): " WEB_LISTENING_PORT
+WEB_LISTENING_PORT=${WEB_LISTENING_PORT:-20320}
+
+log "INFO" "Running Docker container for Capfizz on port $WEB_LISTENING_PORT..."
 docker run -d \
    --restart unless-stopped \
    --name capfizz \
-   --network host \
-   -v "$HOME/appdata/capfizz:/config" \
-   -e USER_ID="$(id -u)" \
-   -e GROUP_ID="$(id -g)" \
-   -e WEB_LISTENING_PORT="$WEB_LISTENING_PORT" \
-   winsnip/capfizz:latest
+   -p $WEB_LISTENING_PORT:$WEB_LISTENING_PORT \
+   capfizz-image
 log "SUCCESS" "Capfizz container running with name 'capfizz'."
 
 # Configure firewall
