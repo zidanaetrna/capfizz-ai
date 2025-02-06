@@ -96,6 +96,7 @@ log "INFO" "Building Docker container for Capfizz..."
 docker build -t capfizz-new-image ~/capfizz-docker
 log "SUCCESS" "Capfizz container built with image name 'capfizz-new-image'."
 
+# Prompt for the port to be used
 read -p "Enter port for web listening (default 20320): " WEB_LISTENING_PORT
 WEB_LISTENING_PORT=${WEB_LISTENING_PORT:-20320}
 
