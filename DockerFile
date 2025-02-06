@@ -1,43 +1,45 @@
-# Gunakan image Nginx sebagai base
-FROM nginx:latest
+# Use Node.js as the base image (Puppeteer requires Node.js)
+FROM node:16-slim
 
-# Buat direktori untuk halaman web
-RUN mkdir -p /usr/share/nginx/html
+# Install necessary dependencies for Chromium and Puppeteer
+RUN apt-get update && apt-get install -y \
+    wget \
+    curl \
+    unzip \
+    chromium \
+    fonts-liberation \
+    libappindicator3-1 \
+    libasound2 \
+    libatk-bridge2.0-0 \
+    libatk1.0-0 \
+    libcups2 \
+    libdbus-1-3 \
+    libgdk-pixbuf2.0-0 \
+    libnspr4 \
+    libnss3 \
+    libx11-xcb1 \
+    libxcomposite1 \
+    libxdamage1 \
+    libxrandr2 \
+    xdg-utils \
+    nginx
 
-# Tambahkan halaman web yang mengarahkan user untuk menginstal ekstensi
-RUN echo '<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Capfizz Sentry Node Registration</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            margin: 0;
-            padding: 20px;
-            background-color: #f4f4f4;
-        }
-        h1 {
-            color: #333;
-        }
-        a {
-            color: #007bff;
-        }
-    </style>
-</head>
-<body>
-    <h1>Welcome to Capfizz Sentry Node</h1>
-    <p>To start using Capfizz AI, please install the Capfizz Sentry Node extension:</p>
-    <p><a href="https://chromewebstore.google.com/detail/capfizz-sentry-node/agollninopbkafedoijcnbdopajjjmfa" target="_blank">Install Capfizz Sentry Node Extension</a></p>
-    <p>Once installed, the extension will allow you to log in using your Gmail account and connect to Capfizz AI.</p>
-    <p>If you're already logged in, you can proceed to use Capfizz AI. If not, follow the instructions within the extension to log in to your Gmail account.</p>
-    <p>For more details, visit our <a href="https://mainnet.capfizz.com/register?ref=GFMNDF" target="_blank">main registration page</a>.</p>
-</body>
-</html>' > /usr/share/nginx/html/index.html
+# Install Puppeteer
+WORKDIR /app
+COPY package.json /app/package.json
+RUN npm install
 
-# Expose port 20320
-EXPOSE 20320
+# Download Capfizz extension CRX file
+RUN wget -O /app/capfizz-extension.crx https://clients2.google.com/service/update2/crx?response=redirect&prodversion=55.0&x=id%3Dagollninopbkafedoijcnbdopajjjmfa%26installsource%3Dondemand%26uc
 
-# Jalankan Nginx
-CMD ["nginx", "-g", "daemon off;"]
+# Set environment variables for Puppeteer to use Chromium
+ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium
+
+# Setup Nginx to serve the registration page
+RUN echo '<!DOCTYPE html><html><body><h1>Capfizz Sentry Node Registration</h1><p>Please install the Capfizz extension if you haven\'t already.</p></body></html>' > /usr/share/nginx/html/index.html
+
+# Expose port 80 for Nginx
+EXPOSE 80
+
+# Command to run Chromium in headless mode and Nginx to serve the page
+CMD ["bash", "-c", "chromium --headless --disable-gpu --remote-debugging-port=9222 --load-extension=/app/capfizz-extension.crx & nginx -g 'daemon off;'"]
