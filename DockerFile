@@ -1,38 +1,29 @@
-# Use an official base image with Chromium
+# Use a base image with Chromium pre-installed
 FROM zenika/alpine-chrome:latest
 
-# Set environment variables for Chromium
-ENV CHROME_BIN="/usr/bin/chromium-browser" \
-    DISPLAY=":0"
+# Set display to dummy to avoid the need for an actual display server
+ENV DISPLAY=:99
 
-# Install required dependencies for running Chromium
-RUN apk add --no-cache \
-    bash \
+# Install necessary dependencies
+RUN apk update && apk add --no-cache \
     curl \
-    ca-certificates \
+    bash \
+    xvfb-run \
+    ttf-freefont \
     libx11 \
     libxcomposite \
-    libxdamage \
     libxrandr \
     libxi \
     libxtst \
-    nss \
-    freetype \
-    fontconfig \
-    ttf-freefont \
-    && apk add --no-cache --virtual .build-deps \
-    # Ensure proper installation of Chromium
-    chromium
+    libxdamage \
+    libgdk-pixbuf \
+    && rm -rf /var/cache/apk/*
 
 # Set the working directory
 WORKDIR /app
 
-# Install Capfizz extension (download and unzip)
-RUN curl -L -o capfizz-extension.zip "https://chrome.google.com/webstore/detail/capfizz-sentry-node/agollninopbkafedoijcnbdopajjjmfa" \
-    && unzip capfizz-extension.zip -d /app/extension
-
-# Expose the necessary port
+# Expose port for web server (replace with correct port if needed)
 EXPOSE 20320
 
-# Start Chromium with the extension loaded (in headless mode)
-CMD ["chromium-browser", "--no-sandbox", "--headless", "--disable-gpu", "--remote-debugging-port=9222", "--load-extension=/app/extension"]
+# Command to run Chromium browser in headless mode
+CMD ["xvfb-run", "--server-args='-screen 0 1280x1024x24'", "/usr/bin/chromium-browser", "--no-sandbox", "--headless", "--remote-debugging-port=9222"]
