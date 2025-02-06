@@ -1,21 +1,32 @@
-# Use the official Chromium Docker image
-FROM zenika/alpine-chrome:latest
+FROM ubuntu:20.04
 
-# Set the working directory for your app
+# Set the user to root (default user is root in Docker containers)
+USER root
+
+# Install required packages
+RUN apt-get update && apt-get install -y \
+    wget \
+    curl \
+    gnupg2 \
+    ca-certificates \
+    fonts-liberation \
+    libappindicator3-1 \
+    libasound2 \
+    libatk-bridge2.0-0 \
+    libatk1.0-0 \
+    chromium \
+    unzip \
+    tzdata && \
+    apt-get clean
+
+# Set the working directory to /app
 WORKDIR /app
 
-# Install dependencies for Capfizz extension
-RUN apk update && apk add --no-cache \
-    unzip \
-    chromium
+# Add other necessary files like your app or configuration files
+# COPY . .
 
-# Install Capfizz Extension (assuming you have a zip of the extension)
-RUN mkdir -p /app/extensions && \
-    curl -L -o /app/extensions/capfizz.zip https://github.com/0xmoei/capfizz-extension/archive/refs/heads/main.zip && \
-    unzip /app/extensions/capfizz.zip -d /app/extensions/
+# Expose the port for the web application
+EXPOSE 20320
 
-# Expose port for debugging and access
-EXPOSE 9222
-
-# Command to run Chromium in headless mode with the Capfizz extension
-CMD ["chromium-browser", "--headless", "--no-sandbox", "--remote-debugging-port=9222", "--load-extension=/app/extensions/capfizz-extension-main", "http://localhost"]
+# Start the application (you can adjust this depending on what you're running)
+CMD ["chromium", "--no-sandbox", "--headless", "http://localhost:20320"]
