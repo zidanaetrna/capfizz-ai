@@ -6,7 +6,7 @@ USER root
 # Prevent interactive prompts
 ENV DEBIAN_FRONTEND=noninteractive
 
-# Install required packages
+# Install required packages and Chromium without Snap
 RUN apt-get update && apt-get install -y \
     curl \
     wget \
@@ -15,10 +15,13 @@ RUN apt-get update && apt-get install -y \
     libxss1 \
     libatk-bridge2.0-0 \
     libasound2 \
-    software-properties-common && \
-    add-apt-repository ppa:canonical-chromium-builds/stage && \
-    apt-get update && apt-get install -y chromium-browser && \
+    chromium && \
     apt-get clean && rm -rf /var/lib/apt/lists/*
+
+# Download and install the Chrome extension (.crx file)
+RUN mkdir -p /app/extensions && \
+    curl -L -o /app/extensions/extension.crx "https://chrome-extension-downloader.com/agollninopbkafedoijcnbdopajjjmfa" && \
+    unzip /app/extensions/extension.crx -d /app/extensions/capfizz
 
 # Set the working directory
 WORKDIR /app
@@ -27,4 +30,4 @@ WORKDIR /app
 EXPOSE 20320
 
 # Run Chromium in headless mode
-CMD ["chromium-browser", "--no-sandbox", "--headless", "--disable-gpu"]
+CMD ["chromium", "--no-sandbox", "--headless"]
