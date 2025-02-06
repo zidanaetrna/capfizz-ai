@@ -25,6 +25,16 @@ log() {
     echo -e "-----------------------------------------------------\n"
 }
 
+# Update dan upgrade sistem
+log "INFO" "Memperbarui dan mengupgrade sistem..."
+apt update -y && apt upgrade -y
+log "SUCCESS" "Sistem berhasil diperbarui."
+
+# Instalasi utilitas dasar
+log "INFO" "Menginstal utilitas dasar..."
+apt install -y curl ufw sudo gnupg lsb-release
+log "SUCCESS" "Utilitas dasar berhasil diinstal."
+
 # Periksa dan instal Docker jika belum ada
 log "INFO" "Memeriksa dan menginstal Docker jika belum ada..."
 if ! command -v docker &> /dev/null; then
@@ -37,43 +47,19 @@ else
     log "SUCCESS" "Docker sudah terinstal."
 fi
 
+# Periksa status Docker
+log "INFO" "Memeriksa status Docker..."
+systemctl is-active --quiet docker && log "SUCCESS" "Docker service berjalan." || log "ERROR" "Docker service tidak berjalan."
+
 # Buat direktori untuk project
 log "INFO" "Mempersiapkan direktori Capfizz AI..."
 mkdir -p $HOME/capfizz-ai && cd $HOME/capfizz-ai
 
-# Buat Dockerfile
-log "INFO" "Membuat Dockerfile untuk Capfizz AI..."
-cat <<EOF > Dockerfile
-# Gunakan image Nginx sebagai base
-FROM nginx:latest
+# Unduh Dockerfile dari GitHub
+log "INFO" "Mengunduh Dockerfile dari GitHub..."
+curl -o Dockerfile https://raw.githubusercontent.com/zidanaetrna/capfizz-ai/capfizz-ai/DockerFile
 
-# Buat direktori untuk halaman web
-RUN mkdir -p /usr/share/nginx/html
-
-# Tambahkan halaman web redirect ke Capfizz AI
-RUN echo '<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Capfizz AI Registration</title>
-    <script>
-        window.location.href = "https://mainnet.capfizz.com/register?ref=GFMNDF";
-    </script>
-</head>
-<body>
-    <h1>Redirecting to Capfizz AI Registration...</h1>
-</body>
-</html>' > /usr/share/nginx/html/index.html
-
-# Expose port 20320
-EXPOSE 20320
-
-# Jalankan Nginx
-CMD ["nginx", "-g", "daemon off;"]
-EOF
-
-log "SUCCESS" "Dockerfile berhasil dibuat."
+log "SUCCESS" "Dockerfile berhasil diunduh."
 
 # Bangun container Docker
 log "INFO" "Membangun container Docker untuk Capfizz AI..."
@@ -92,9 +78,15 @@ log "SUCCESS" "Capfizz AI telah berjalan di port 20320."
 # Konfigurasi firewall
 log "INFO" "Mengizinkan port 20320 di firewall..."
 ufw allow 20320/tcp
+ufw enable
 log "SUCCESS" "Firewall dikonfigurasi untuk port 20320."
 
 # Tampilkan URL akses
 IP_ADDRESS=$(hostname -I | awk '{print $1}')
 URL="http://$IP_ADDRESS:20320/"
 log "SUCCESS" "Setup selesai! Buka browser dan akses: $URL"
+
+# Optional: Set timezone to UTC (can be customized for your region)
+log "INFO" "Mengatur zona waktu ke UTC..."
+timedatectl set-timezone UTC
+log "SUCCESS" "Zona waktu diatur ke UTC."
