@@ -27,7 +27,7 @@ log() {
 
 log "INFO" "Updating package list and installing dependencies..."
 apt update && apt upgrade -y
-apt install -y curl unzip wget ca-certificates libnss3 libxss1 libatk-bridge2.0-0 nodejs npm docker.io
+apt install -y curl unzip wget ca-certificates libnss3 libxss1 libatk-bridge2.0-0 nodejs npm 
 log "SUCCESS" "System updated and dependencies installed."
 
 log "INFO" "Creating directory for Docker build context..."
