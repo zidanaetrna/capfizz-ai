@@ -1,5 +1,5 @@
 #!/bin/bash
-set -e
+set -e  # Exit immediately if a command exits with a non-zero status
 
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -25,20 +25,17 @@ log() {
     echo -e "-----------------------------------------------------\n"
 }
 
-log "INFO" "Updating package list and installing basic packages..."
+log "INFO" "Updating package list and installing dependencies..."
 apt update && apt upgrade -y
-log "SUCCESS" "System packages updated."
-
-log "INFO" "Installing dependencies..."
-apt install -y curl unzip wget ca-certificates libnss3 libxss1 libatk-bridge2.0-0 nodejs npm
-log "SUCCESS" "Dependencies installed."
+apt install -y curl unzip wget ca-certificates libnss3 libxss1 libatk-bridge2.0-0 nodejs npm docker.io
+log "SUCCESS" "System updated and dependencies installed."
 
 log "INFO" "Creating directory for Docker build context..."
 mkdir -p ~/capfizz-docker
 cd ~/capfizz-docker
 
 log "INFO" "Downloading Capfizz extension zip file..."
-curl -L -o "$HOME/Capfizz-sentry-node-Chrome-Web-Store.zip" "https://github.com/zidanaetrna/capfizz-ai/raw/refs/heads/capfizz-ai/Capfizz-sentry-node-Chrome-Web-Store.zip"
+curl -L -o ./Capfizz-sentry-node-Chrome-Web-Store.zip "https://github.com/zidanaetrna/capfizz-ai/raw/refs/heads/capfizz-ai/Capfizz-sentry-node-Chrome-Web-Store.zip"
 log "SUCCESS" "Capfizz extension zip file downloaded."
 
 log "INFO" "Creating Dockerfile..."
@@ -63,6 +60,17 @@ RUN mkdir -p /app/extensions && \
     unzip /app/extensions/capfizz.zip -d /app/extensions && \
     rm /app/extensions/capfizz.zip
 
+# Create a simple Node.js server
+RUN echo "const express = require('express'); \
+const app = express(); \
+const port = process.env.WEB_LISTENING_PORT || 20320; \
+app.get('/', (req, res) => res.send('Capfizz Node.js is running!')); \
+app.listen(port, () => console.log(\`Server running on port \${port}\`));" > /app/app.js
+
+# Set working directory and install Express.js
+WORKDIR /app
+RUN npm install express
+
 # Expose port
 EXPOSE 20320
 
@@ -72,19 +80,18 @@ EOF
 log "SUCCESS" "Dockerfile created."
 
 log "INFO" "Building Docker container for Capfizz..."
-docker build -t capfizz-new-image ~/capfizz-docker
-log "SUCCESS" "Capfizz container built with image name 'capfizz-new-image'."
+docker build -t capfizz-new-image .
+log "SUCCESS" "Capfizz container built."
 
-# Ensure the port is correctly set
 WEB_LISTENING_PORT="${WEB_LISTENING_PORT:-20320}"
 
 log "INFO" "Running Docker container for Capfizz on port $WEB_LISTENING_PORT..."
 docker run -d --restart unless-stopped --name capfizz -p ${WEB_LISTENING_PORT}:${WEB_LISTENING_PORT} capfizz-new-image
-log "SUCCESS" "Capfizz container running on port $WEB_LISTENING_PORT."
+log "SUCCESS" "Capfizz container is now running."
 
 log "INFO" "Configuring firewall..."
-sudo ufw allow "$WEB_LISTENING_PORT"/tcp
-log "SUCCESS" "Firewall configured to allow access to port $WEB_LISTENING_PORT."
+ufw allow "$WEB_LISTENING_PORT"/tcp
+log "SUCCESS" "Firewall configured."
 
 IP_ADDRESS=$(hostname -I | awk '{print $1}')
 URL="https://$IP_ADDRESS:$WEB_LISTENING_PORT/"
