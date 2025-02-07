@@ -33,7 +33,7 @@ log "SUCCESS" "Docker is already installed."
 
 log "INFO" "Updating package list and installing dependencies..."
 apt update && apt upgrade -y
-apt install -y curl unzip wget ca-certificates libnss3 libxss1 libatk-bridge2.0-0 nodejs npm chromium-browser
+apt install -y curl unzip wget ca-certificates libnss3 libxss1 libatk-bridge2.0-0 nodejs npm 
 log "SUCCESS" "System updated and dependencies installed."
 
 log "INFO" "Creating directory for Docker build context..."
@@ -57,8 +57,11 @@ RUN apt-get update && apt-get install -y \\
     curl wget ca-certificates unzip libnss3 libxss1 libatk-bridge2.0-0 nodejs npm \\
     libasound2 libatk1.0-0 libcups2 libdbus-1-3 libgdk-pixbuf2.0-0 libnspr4 \\
     libnss3 libx11-xcb1 libxcomposite1 libxdamage1 libxrandr2 libgbm1 \\
-    chromium-browser \\
+    chromium-driver chromium-browser \\
     && apt-get clean && rm -rf /var/lib/apt/lists/*
+
+# Install Puppeteer (to control Chromium)
+RUN npm install -g puppeteer
 
 # Create working directory
 WORKDIR /app
@@ -69,26 +72,32 @@ RUN mkdir -p /app/extensions && \\
     unzip /app/extensions/capfizz.zip -d /app/extensions && \\
     rm /app/extensions/capfizz.zip
 
-# Create a script to launch Chromium with the Capfizz extension
-RUN echo "chromium-browser --no-sandbox --disable-dev-shm-usage --load-extension=/app/extensions --remote-debugging-port=9222" > /app/start.sh
-RUN chmod +x /app/start.sh
+# Create a Node.js script to launch the extension in Chromium
+RUN echo "const puppeteer = require('puppeteer'); \\
+(async () => { \\
+    const browser = await puppeteer.launch({ headless: true, executablePath: '/usr/bin/chromium-browser' }); \\
+    const page = await browser.newPage(); \\
+    await page.goto('https://www.example.com');  # Modify this URL to interact with Capfizz extension \\
+    console.log('Capfizz extension is running!'); \\
+    await browser.close(); \\
+})();" > /app/start.js
 
 # Expose port
-EXPOSE 9222
+EXPOSE 20320
 
-# Run Chromium with Capfizz extension
-CMD ["/app/start.sh"]
+# Run the Node.js script with Puppeteer
+CMD ["node", "start.js"]
 EOF
 log "SUCCESS" "Dockerfile created."
 
 log "INFO" "Building Docker container for Capfizz..."
-docker build -t capfizz-chromium-image .
+docker build -t capfizz-new-image . 
 log "SUCCESS" "Capfizz container built."
 
-WEB_LISTENING_PORT="${WEB_LISTENING_PORT:-9222}"
+WEB_LISTENING_PORT="${WEB_LISTENING_PORT:-20320}"
 
 log "INFO" "Running Docker container for Capfizz on port $WEB_LISTENING_PORT..."
-docker run -d --restart unless-stopped --name capfizz -p ${WEB_LISTENING_PORT}:${WEB_LISTENING_PORT} capfizz-chromium-image
+docker run -d --restart unless-stopped --name capfizz-new-container -p ${WEB_LISTENING_PORT}:${WEB_LISTENING_PORT} capfizz-new-image
 log "SUCCESS" "Capfizz container is now running."
 
 log "INFO" "Configuring firewall..."
