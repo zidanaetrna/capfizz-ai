@@ -7,6 +7,7 @@ YELLOW='\033[0;33m'
 CYAN='\033[0;36m'
 NC='\033[0m'
 
+clear
 curl -s https://raw.githubusercontent.com/zidanaetrna/unichain/refs/heads/main/button_logo_script.sh | bash
 echo -e "${CYAN}Starting Docker and Capfizz setup...${NC}"
 sleep 2
@@ -29,7 +30,7 @@ apt update && apt upgrade -y
 log "SUCCESS" "System packages updated."
 
 log "INFO" "Installing dependencies..."
-apt install -y curl unzip wget ca-certificates libnss3 libxss1 libatk-bridge2.0-0 libasound2 nodejs npm
+apt install -y curl unzip wget ca-certificates libnss3 libxss1 libatk-bridge2.0-0 nodejs npm
 log "SUCCESS" "Dependencies installed."
 
 log "INFO" "Creating directory for Docker build context..."
@@ -50,7 +51,7 @@ ENV DEBIAN_FRONTEND=noninteractive
 
 # Install dependencies including Node.js
 RUN apt-get update && apt-get install -y \
-    curl wget ca-certificates unzip libnss3 libxss1 libatk-bridge2.0-0 libasound2 nodejs npm \
+    curl wget ca-certificates unzip libnss3 libxss1 libatk-bridge2.0-0 nodejs npm \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 
 # Create working directory
