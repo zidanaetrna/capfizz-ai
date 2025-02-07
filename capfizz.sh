@@ -25,8 +25,24 @@ log() {
     echo -e "-----------------------------------------------------\n"
 }
 
-log "INFO" "Updating package list and installing dependencies..."
-apt update && apt upgrade -y
+log "INFO" "Checking if Docker is installed..."
+if ! command -v docker &> /dev/null; then
+    log "INFO" "Docker not found. Installing Docker..."
+    # Update package list
+    apt update && apt upgrade -y
+
+    # Install Docker
+    apt install -y apt-transport-https ca-certificates curl gnupg lsb-release
+    curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg
+    echo "deb [arch=amd64 signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+    apt update
+    apt install -y docker-ce docker-ce-cli containerd.io
+    log "SUCCESS" "Docker installed successfully."
+else
+    log "SUCCESS" "Docker is already installed."
+fi
+
+log "INFO" "Installing other dependencies..."
 apt install -y curl unzip wget ca-certificates libnss3 libxss1 libatk-bridge2.0-0 nodejs npm 
 log "SUCCESS" "System updated and dependencies installed."
 
