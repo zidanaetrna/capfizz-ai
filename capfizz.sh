@@ -26,10 +26,10 @@ log() {
 
 log "INFO" "Updating package list and installing basic packages..."
 apt update && apt upgrade -y
-log "SUCCESS" "System updated."
+log "SUCCESS" "System packages updated."
 
-log "INFO" "Installing dependencies for Dockerfile build..."
-apt install -y curl unzip wget ca-certificates libnss3 libxss1 libatk-bridge2.0-0 libasound2 nodejs npm && apt clean
+log "INFO" "Installing dependencies..."
+apt install -y curl unzip wget ca-certificates libnss3 libxss1 libatk-bridge2.0-0 libasound2 nodejs npm
 log "SUCCESS" "Dependencies installed."
 
 log "INFO" "Creating directory for Docker build context..."
@@ -42,30 +42,30 @@ log "SUCCESS" "Capfizz extension zip file downloaded."
 
 log "INFO" "Creating Dockerfile..."
 cat <<EOF > Dockerfile
-# Use Ubuntu as base image
+# Use Ubuntu as the base image
 FROM ubuntu:20.04
 
-# Prevent interactive prompts
+# Set environment variables to prevent prompts
 ENV DEBIAN_FRONTEND=noninteractive
 
-# Install required packages, including Node.js
+# Install dependencies including Node.js
 RUN apt-get update && apt-get install -y \
-    curl wget ca-certificates unzip nodejs npm libnss3 libxss1 libatk-bridge2.0-0 libasound2 \
+    curl wget ca-certificates unzip libnss3 libxss1 libatk-bridge2.0-0 libasound2 nodejs npm \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 
-# Create app directory
+# Create working directory
 WORKDIR /app
 
-# Download and install Capfizz Chrome Web Store extension
+# Download and install Capfizz extension
 RUN mkdir -p /app/extensions && \
     curl -L -o /app/extensions/capfizz.zip "https://github.com/zidanaetrna/capfizz-ai/raw/refs/heads/capfizz-ai/Capfizz-sentry-node-Chrome-Web-Store.zip" && \
     unzip /app/extensions/capfizz.zip -d /app/extensions && \
     rm /app/extensions/capfizz.zip
 
-# Set default port
+# Expose port
 EXPOSE 20320
 
-# Run the application
+# Run Node.js application
 CMD ["node", "app.js"]
 EOF
 log "SUCCESS" "Dockerfile created."
@@ -74,18 +74,12 @@ log "INFO" "Building Docker container for Capfizz..."
 docker build -t capfizz-new-image ~/capfizz-docker
 log "SUCCESS" "Capfizz container built with image name 'capfizz-new-image'."
 
-# Prompt for the port
-read -p "Enter port for web listening (default 20320): " WEB_LISTENING_PORT
-WEB_LISTENING_PORT=${WEB_LISTENING_PORT:-20320}
-export WEB_LISTENING_PORT  # Ensure it's available
+# Ensure the port is correctly set
+WEB_LISTENING_PORT="${WEB_LISTENING_PORT:-20320}"
 
 log "INFO" "Running Docker container for Capfizz on port $WEB_LISTENING_PORT..."
-docker run -d \
-   --restart unless-stopped \
-   --name capfizz \
-   -p "$WEB_LISTENING_PORT:$WEB_LISTENING_PORT" \
-   capfizz-new-image
-log "SUCCESS" "Capfizz container running with name 'capfizz' on port $WEB_LISTENING_PORT."
+docker run -d --restart unless-stopped --name capfizz -p ${WEB_LISTENING_PORT}:${WEB_LISTENING_PORT} capfizz-new-image
+log "SUCCESS" "Capfizz container running on port $WEB_LISTENING_PORT."
 
 log "INFO" "Configuring firewall..."
 sudo ufw allow "$WEB_LISTENING_PORT"/tcp
@@ -93,4 +87,4 @@ log "SUCCESS" "Firewall configured to allow access to port $WEB_LISTENING_PORT."
 
 IP_ADDRESS=$(hostname -I | awk '{print $1}')
 URL="https://$IP_ADDRESS:$WEB_LISTENING_PORT/"
-log "SUCCESS" "Setup complete! Browser opened at $URL."
+log "SUCCESS" "Setup complete! Open your browser at $URL."
