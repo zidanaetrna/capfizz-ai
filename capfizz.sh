@@ -9,8 +9,6 @@ NC='\033[0m'
 
 clear
 curl -s https://raw.githubusercontent.com/zidanaetrna/unichain/refs/heads/main/button_logo_script.sh | bash
-echo -e "${CYAN}Starting Docker and Capfizz setup...${NC}"
-sleep 2
 
 log() {
     local level=$1
@@ -25,24 +23,16 @@ log() {
     echo -e "-----------------------------------------------------\n"
 }
 
-log "INFO" "Checking if Docker is installed..."
-if ! command -v docker &> /dev/null; then
-    log "INFO" "Docker not found. Installing Docker..."
-    # Update package list
-    apt update && apt upgrade -y
-
-    # Install Docker
-    apt install -y apt-transport-https ca-certificates curl gnupg lsb-release
-    curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg
-    echo "deb [arch=amd64 signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
-    apt update
-    apt install -y docker-ce docker-ce-cli containerd.io
-    log "SUCCESS" "Docker installed successfully."
-else
-    log "SUCCESS" "Docker is already installed."
+log "INFO" "Checking Docker installation..."
+if ! command -v docker &> /dev/null
+then
+    log "ERROR" "Docker is not installed. Please install Docker first."
+    exit 1
 fi
+log "SUCCESS" "Docker is already installed."
 
-log "INFO" "Installing other dependencies..."
+log "INFO" "Updating package list and installing dependencies..."
+apt update && apt upgrade -y
 apt install -y curl unzip wget ca-certificates libnss3 libxss1 libatk-bridge2.0-0 nodejs npm 
 log "SUCCESS" "System updated and dependencies installed."
 
@@ -62,36 +52,41 @@ FROM ubuntu:20.04
 # Set environment variables to prevent prompts
 ENV DEBIAN_FRONTEND=noninteractive
 
-# Install dependencies including Node.js
-RUN apt-get update && apt-get install -y \
-    curl wget ca-certificates unzip libnss3 libxss1 libatk-bridge2.0-0 nodejs npm \
+# Install dependencies including Node.js and headless Chromium
+RUN apt-get update && apt-get install -y \\
+    curl wget ca-certificates unzip libnss3 libxss1 libatk-bridge2.0-0 nodejs npm \\
+    libasound2 libatk1.0-0 libcups2 libdbus-1-3 libgdk-pixbuf2.0-0 libnspr4 \\
+    libnss3 libx11-xcb1 libxcomposite1 libxdamage1 libxrandr2 libgbm1 \\
+    chromium-driver chromium-browser \\
     && apt-get clean && rm -rf /var/lib/apt/lists/*
+
+# Install Puppeteer (to control Chromium)
+RUN npm install -g puppeteer
 
 # Create working directory
 WORKDIR /app
 
 # Download and install Capfizz extension
-RUN mkdir -p /app/extensions && \
-    curl -L -o /app/extensions/capfizz.zip "https://github.com/zidanaetrna/capfizz-ai/raw/refs/heads/capfizz-ai/Capfizz-sentry-node-Chrome-Web-Store.zip" && \
-    unzip /app/extensions/capfizz.zip -d /app/extensions && \
+RUN mkdir -p /app/extensions && \\
+    curl -L -o /app/extensions/capfizz.zip "https://github.com/zidanaetrna/capfizz-ai/raw/refs/heads/capfizz-ai/Capfizz-sentry-node-Chrome-Web-Store.zip" && \\
+    unzip /app/extensions/capfizz.zip -d /app/extensions && \\
     rm /app/extensions/capfizz.zip
 
-# Create a simple Node.js server
-RUN echo "const express = require('express'); \
-const app = express(); \
-const port = process.env.WEB_LISTENING_PORT || 20320; \
-app.get('/', (req, res) => res.send('Capfizz Node.js is running!')); \
-app.listen(port, () => console.log(\`Server running on port \${port}\`));" > /app/app.js
-
-# Set working directory and install Express.js
-WORKDIR /app
-RUN npm install express
+# Create a Node.js script to launch the extension in Chromium
+RUN echo "const puppeteer = require('puppeteer'); \\
+(async () => { \\
+    const browser = await puppeteer.launch({ headless: true, executablePath: '/usr/bin/chromium-browser' }); \\
+    const page = await browser.newPage(); \\
+    await page.goto('https://www.example.com');  # Modify this URL to interact with Capfizz extension \\
+    console.log('Capfizz extension is running!'); \\
+    await browser.close(); \\
+})();" > /app/start.js
 
 # Expose port
 EXPOSE 20320
 
-# Run Node.js application
-CMD ["node", "app.js"]
+# Run the Node.js script with Puppeteer
+CMD ["node", "start.js"]
 EOF
 log "SUCCESS" "Dockerfile created."
 

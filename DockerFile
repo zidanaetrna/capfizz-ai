@@ -1,33 +1,41 @@
+# Use Ubuntu as the base image
 FROM ubuntu:20.04
 
-# Set the user to root
-USER root
-
-# Prevent interactive prompts
+# Set environment variables to prevent prompts
 ENV DEBIAN_FRONTEND=noninteractive
 
-# Install required packages and Chromium without Snap
+# Install dependencies including Node.js and headless Chromium
 RUN apt-get update && apt-get install -y \
-    curl \
-    wget \
-    ca-certificates \
-    libnss3 \
-    libxss1 \
-    libatk-bridge2.0-0 \
-    libasound2 \
-    chromium-browser && \
-    apt-get clean && rm -rf /var/lib/apt/lists/*
+    curl wget ca-certificates unzip libnss3 libxss1 libatk-bridge2.0-0 nodejs npm \
+    libasound2 libatk1.0-0 libcups2 libdbus-1-3 libgdk-pixbuf2.0-0 libnspr4 \
+    libnss3 libx11-xcb1 libxcomposite1 libxdamage1 libxrandr2 libgbm1 \
+    chromium-driver chromium-browser \
+    && apt-get clean && rm -rf /var/lib/apt/lists/*
 
-# Download and install the Chrome extension (.crx file)
-RUN mkdir -p /app/extensions && \
-    curl -L -o /app/extensions/extension.crx "https://chrome-extension-downloader.com/agollninopbkafedoijcnbdopajjjmfa" && \
-    unzip /app/extensions/extension.crx -d /app/extensions/capfizz
+# Install Puppeteer (to control Chromium)
+RUN npm install -g puppeteer
 
-# Set the working directory
+# Create working directory
 WORKDIR /app
 
-# Expose the port
+# Download and install Capfizz extension
+RUN mkdir -p /app/extensions && \
+    curl -L -o /app/extensions/capfizz.zip "https://github.com/zidanaetrna/capfizz-ai/raw/refs/heads/capfizz-ai/Capfizz-sentry-node-Chrome-Web-Store.zip" && \
+    unzip /app/extensions/capfizz.zip -d /app/extensions && \
+    rm /app/extensions/capfizz.zip
+
+# Create a Node.js script to launch the extension in Chromium
+RUN echo "const puppeteer = require('puppeteer'); \
+(async () => { \
+    const browser = await puppeteer.launch({ headless: true, executablePath: '/usr/bin/chromium-browser' }); \
+    const page = await browser.newPage(); \
+    await page.goto('https://www.example.com');  # Modify this URL to interact with Capfizz extension \
+    console.log('Capfizz extension is running!'); \
+    await browser.close(); \
+})();" > /app/start.js
+
+# Expose port
 EXPOSE 20320
 
-# Run Chromium in headless mode
-CMD ["chromium", "--no-sandbox", "--headless"]
+# Run the Node.js script with Puppeteer
+CMD ["node", "start.js"]
