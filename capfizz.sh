@@ -25,23 +25,11 @@ log() {
 }
 
 log "INFO" "Updating package list and installing basic packages..."
-apt update
-log "SUCCESS" "Package list updated."
-
-apt upgrade -y
-log "SUCCESS" "Basic packages installed."
+apt update && apt upgrade -y
+log "SUCCESS" "System updated."
 
 log "INFO" "Installing dependencies for Dockerfile build..."
-apt install -y \
-    curl \
-    unzip \
-    wget \
-    ca-certificates \
-    libnss3 \
-    libxss1 \
-    libatk-bridge2.0-0 \
-    libasound2 \
-    && apt clean
+apt install -y curl unzip wget ca-certificates libnss3 libxss1 libatk-bridge2.0-0 libasound2 nodejs npm && apt clean
 log "SUCCESS" "Dependencies installed."
 
 log "INFO" "Creating directory for Docker build context..."
@@ -54,26 +42,19 @@ log "SUCCESS" "Capfizz extension zip file downloaded."
 
 log "INFO" "Creating Dockerfile..."
 cat <<EOF > Dockerfile
-# Use the official Ubuntu base image
+# Use Ubuntu as base image
 FROM ubuntu:20.04
-
-# Set the user to root
-USER root
 
 # Prevent interactive prompts
 ENV DEBIAN_FRONTEND=noninteractive
 
-# Install required packages and utilities
+# Install required packages, including Node.js
 RUN apt-get update && apt-get install -y \
-    curl \
-    wget \
-    ca-certificates \
-    unzip \
-    libnss3 \
-    libxss1 \
-    libatk-bridge2.0-0 \
-    libasound2 \
+    curl wget ca-certificates unzip nodejs npm libnss3 libxss1 libatk-bridge2.0-0 libasound2 \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
+
+# Create app directory
+WORKDIR /app
 
 # Download and install Capfizz Chrome Web Store extension
 RUN mkdir -p /app/extensions && \
@@ -81,13 +62,10 @@ RUN mkdir -p /app/extensions && \
     unzip /app/extensions/capfizz.zip -d /app/extensions && \
     rm /app/extensions/capfizz.zip
 
-# Set the working directory
-WORKDIR /app
-
-# Expose the desired port (20320)
+# Set default port
 EXPOSE 20320
 
-# Run the necessary command to start the service (without Chromium)
+# Run the application
 CMD ["node", "app.js"]
 EOF
 log "SUCCESS" "Dockerfile created."
@@ -96,15 +74,16 @@ log "INFO" "Building Docker container for Capfizz..."
 docker build -t capfizz-new-image ~/capfizz-docker
 log "SUCCESS" "Capfizz container built with image name 'capfizz-new-image'."
 
-# Prompt for the port to be used
+# Prompt for the port
 read -p "Enter port for web listening (default 20320): " WEB_LISTENING_PORT
 WEB_LISTENING_PORT=${WEB_LISTENING_PORT:-20320}
+export WEB_LISTENING_PORT  # Ensure it's available
 
 log "INFO" "Running Docker container for Capfizz on port $WEB_LISTENING_PORT..."
 docker run -d \
    --restart unless-stopped \
    --name capfizz \
-   -p $WEB_LISTENING_PORT:$WEB_LISTENING_PORT \
+   -p "$WEB_LISTENING_PORT:$WEB_LISTENING_PORT" \
    capfizz-new-image
 log "SUCCESS" "Capfizz container running with name 'capfizz' on port $WEB_LISTENING_PORT."
 
