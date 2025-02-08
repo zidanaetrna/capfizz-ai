@@ -41,7 +41,7 @@ mkdir -p ~/capfizz-docker
 cd ~/capfizz-docker
 
 log "INFO" "Downloading Capfizz extension zip file..."
-curl -L -o ./Capfizz-sentry-node-Chrome-Web-Store.zip "https://github.com/zidanaetrna/capfizz-ai/raw/refs/heads/capfizz-ai/Capfizz-sentry-node-Chrome-Web-Store.zip"
+curl -L -o ./Capfizz-extension.zip "https://github.com/zidanaetrna/capfizz-ai/raw/refs/heads/capfizz-ai/Capfizz-sentry-node-Chrome-Web-Store.zip"
 log "SUCCESS" "Capfizz extension zip file downloaded."
 
 log "INFO" "Creating Dockerfile..."
@@ -60,32 +60,41 @@ RUN apt-get update && apt-get install -y \\
     chromium-driver chromium-browser \\
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 
-# Install Puppeteer (to control Chromium)
-RUN npm install -g puppeteer
+# Install Puppeteer and Express.js
+RUN npm install -g puppeteer express
 
 # Create working directory
 WORKDIR /app
 
-# Download and install Capfizz extension
-RUN mkdir -p /app/extensions && \\
+# Extract Capfizz extension
+RUN mkdir -p /app/extensions/capfizz && \\
     curl -L -o /app/extensions/capfizz.zip "https://github.com/zidanaetrna/capfizz-ai/raw/refs/heads/capfizz-ai/Capfizz-sentry-node-Chrome-Web-Store.zip" && \\
-    unzip /app/extensions/capfizz.zip -d /app/extensions && \\
+    unzip /app/extensions/capfizz.zip -d /app/extensions/capfizz && \\
     rm /app/extensions/capfizz.zip
 
-# Create a Node.js script to launch the extension in Chromium
-RUN echo "const puppeteer = require('puppeteer'); \\
+# Create an Express.js web server to serve the extension
+RUN echo "const express = require('express'); \\
+const puppeteer = require('puppeteer'); \\
+const app = express(); \\
+const PORT = 20320; \\
+app.use(express.static('/app/extensions/capfizz')); \\
+app.get('/', (req, res) => res.sendFile('/app/extensions/capfizz/index.html')); \\
+app.listen(PORT, () => console.log(\`Capfizz extension running at http://localhost:\${PORT}\`)); \\
 (async () => { \\
-    const browser = await puppeteer.launch({ headless: true, executablePath: '/usr/bin/chromium-browser' }); \\
-    const page = await browser.newPage(); \\
-    await page.goto('https://www.example.com');  # Modify this URL to interact with Capfizz extension \\
-    console.log('Capfizz extension is running!'); \\
-    await browser.close(); \\
+    const browser = await puppeteer.launch({ \\
+        headless: false, \\
+        args: ['--no-sandbox', '--disable-setuid-sandbox', \\
+               '--disable-extensions-except=/app/extensions/capfizz', \\
+               '--load-extension=/app/extensions/capfizz'], \\
+        executablePath: '/usr/bin/chromium-browser' \\
+    }); \\
+    console.log('Capfizz extension loaded in Chromium!'); \\
 })();" > /app/start.js
 
 # Expose port
 EXPOSE 20320
 
-# Run the Node.js script with Puppeteer
+# Run Express.js server with Puppeteer
 CMD ["node", "start.js"]
 EOF
 log "SUCCESS" "Dockerfile created."
@@ -105,5 +114,5 @@ ufw allow "$WEB_LISTENING_PORT"/tcp
 log "SUCCESS" "Firewall configured."
 
 IP_ADDRESS=$(hostname -I | awk '{print $1}')
-URL="https://$IP_ADDRESS:$WEB_LISTENING_PORT/"
+URL="http://$IP_ADDRESS:$WEB_LISTENING_PORT/"
 log "SUCCESS" "Setup complete! Open your browser at $URL."
