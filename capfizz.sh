@@ -1,5 +1,5 @@
 #!/bin/bash
-set -e  # Exit immediately if a command exits with a non-zero status
+set -e  # Exit on error
 
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -37,20 +37,26 @@ apt install -y curl unzip wget ca-certificates libnss3 libxss1 libatk-bridge2.0-
 log "SUCCESS" "System updated and dependencies installed."
 
 log "INFO" "Creating directory for extension..."
-mkdir -p ~/capfizz-extension
-cd ~/capfizz-extension
+mkdir -p $HOME/capfizz-extension
+cd $HOME/capfizz-extension
 
 log "INFO" "Downloading Capfizz extension zip file..."
-curl -L -o ./Capfizz-sentry-node-Chrome-Web-Store.zip "https://github.com/zidanaetrna/capfizz-ai/raw/refs/heads/capfizz-ai/Capfizz-sentry-node-Chrome-Web-Store.zip"
+curl -L -o Capfizz.zip "https://github.com/zidanaetrna/capfizz-ai/raw/refs/heads/capfizz-ai/Capfizz-sentry-node-Chrome-Web-Store.zip"
 log "SUCCESS" "Capfizz extension zip file downloaded."
 
 log "INFO" "Extracting Capfizz extension..."
-unzip -o ./Capfizz-sentry-node-Chrome-Web-Store.zip -d ~/capfizz-extension
+unzip -o Capfizz.zip -d $HOME/capfizz-extension
 log "SUCCESS" "Capfizz extension extracted."
 
 log "INFO" "Running Chromium with the Capfizz extension..."
-chromium-browser --headless --disable-gpu --remote-debugging-port=9222 --load-extension=$HOME/capfizz-extension &
-log "SUCCESS" "Chromium is running with the Capfizz extension."
+chromium-browser --headless --disable-gpu --remote-debugging-port=9222 --no-sandbox --load-extension=$HOME/capfizz-extension &
+
+if [ $? -eq 0 ]; then
+    log "SUCCESS" "Chromium is running with the Capfizz extension."
+else
+    log "ERROR" "Failed to start Chromium."
+    exit 1
+fi
 
 WEB_LISTENING_PORT=20320
 log "INFO" "Configuring firewall..."
